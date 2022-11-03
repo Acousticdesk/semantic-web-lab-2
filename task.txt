@@ -1,0 +1,148 @@
+; № 1 Eastern Europe Countries with population from most populous to less populous
+
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dbc: <http://dbpedia.org/resource/Category:>
+
+SELECT ?country xsd:integer(?population) as ?population_total
+WHERE {
+  ?country rdf:type dbo:Country ;
+           dct:subject dbc:Eastern_European_countries ;
+           dbo:populationTotal ?population .
+}
+ORDER BY desc(?population)
+
+
+
+
+
+
+
+
+;  № 2 Counties in Northern America and Europe
+
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dbc: <http://dbpedia.org/resource/Category:>
+
+SELECT ?country GROUP_CONCAT(UCASE(?languageLabel); separator="|") as ?language ?continent
+WHERE {
+  # find all countries in Europe
+  {
+    ?country rdf:type dbo:Country ;
+             dct:subject dbc:Countries_in_Europe .
+     BIND("NORTH AMERICA" AS ?continent)
+  }
+  UNION
+  # find all countries in North America
+  {
+    ?country rdf:type dbo:Country ;
+             dct:subject dbc:Countries_in_North_America .
+     BIND("EUROPE" AS ?continent)
+  }
+  # get all the labels of the county
+  ?country rdfs:label ?countryLabel .
+  # optionally get list of spoken languages
+  OPTIONAL {
+    ?country dbo:language ?languages .
+    ?languages rdfs:label ?languageLabel .
+  }
+  FILTER(lang(?languageLabel) = "en")
+  FILTER (lang(?countryLabel) = "en")
+  FILTER(strstarts(?countryLabel, "A"))
+}
+GROUP BY ?country ?continent
+ORDER BY asc(?country)
+
+
+
+
+
+
+
+
+; № 3.1 Nobel laureates from oldest to youngest
+
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dbc: <http://dbpedia.org/resource/Category:>
+
+SELECT ?person ?birthDate
+WHERE {
+  ?person rdf:type dbo:Person ;
+          dct:subject dbc:Nobel_laureates_in_Physics ;
+          dbo:birthDate ?birthDate .
+}
+ORDER BY asc(?birthDate)
+
+
+
+
+
+
+
+
+;  № 3.2 Top 10 universities with most Nobel prize laureates alumni
+; almaMater, education, institution, university, occupation, organization, workInstitution, workplaces
+
+PREFIX dbp: <http://dbpedia.org/property/>
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dbc: <http://dbpedia.org/resource/Category:>
+
+SELECT ?university count(?person) as ?nobel_laureates_alumni_cout
+WHERE {
+  ?person rdf:type dbo:Person ;
+          dct:subject dbc:Nobel_laureates_in_Physics ;
+          dbo:almaMater | dbp:almaMater | dbo:education | dbp:education | dbo:university | dbp:university ?university .
+   FILTER(!isLiteral(?university) || strlen(?university) > 0)
+}
+GROUP BY(?university)
+ORDER BY desc(?nobel_laureates_alumni_cout)
+LIMIT 10
+
+
+
+
+
+
+
+
+;  № 3.3 Number of nobel prize laureates who are emigrants
+
+PREFIX dbp: <http://dbpedia.org/property/>
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dbc: <http://dbpedia.org/resource/Category:>
+
+# SELECT ?personName GROUP_CONCAT(DISTINCT str(?personCountryLabel); separator="|") as ?birthPlace GROUP_CONCAT(DISTINCT str(?universityCountryLabel); separator="|") as ?educationPlace
+SELECT count(DISTINCT ?personName) as ?numberOfLaureatsEmigrants
+WHERE {
+  ?person rdf:type dbo:Person ;
+          dct:subject dbc:Nobel_laureates_in_Physics ;
+          dbo:almaMater | dbp:almaMater | dbo:education | dbp:education | dbo:university | dbp:university ?university ;
+          dbo:birthPlace ?personCountry ;
+          rdfs:label ?personName .
+
+  ?personCountry rdf:type dbo:Country ;
+          rdfs:label ?personCountryLabel .
+
+  ?university dbp:country ?universityCountry .
+
+  # TODO: How to handle both the literals and the triplets?
+  ?universityCountry rdf:type dbo:Country ;
+          rdfs:label ?universityCountryLabel .
+
+  FILTER(?personCountry != ?universityCountry)
+  FILTER(lang(?personName) = "en")
+  FILTER(lang(?personCountryLabel) = "en")
+  FILTER(lang(?universityCountryLabel) = "en")
+}
+# GROUP BY ?personName
