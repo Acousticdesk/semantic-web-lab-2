@@ -34,14 +34,14 @@ WHERE {
   {
     ?country rdf:type dbo:Country ;
              dct:subject dbc:Countries_in_Europe .
-     BIND("NORTH AMERICA" AS ?continent)
+     BIND("EUROPE" AS ?continent)
   }
   UNION
   # find all countries in North America
   {
     ?country rdf:type dbo:Country ;
              dct:subject dbc:Countries_in_North_America .
-     BIND("EUROPE" AS ?continent)
+     BIND("NORTH AMERICA" AS ?continent)
   }
   # get all the labels of the county
   ?country rdfs:label ?countryLabel .
